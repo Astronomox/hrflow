@@ -47,10 +47,9 @@ export function useMessages(conversationId: string) {
       if (!newMessages.length) return;
       qc.setQueryData([KEY, "messages", conversationId], (old: { data: unknown[] } | undefined) => {
         if (!old) return old;
-        const existing = old.data ?? [];
-        const existingIds = new Set(existing.map((m: { id: string }) => m.id));
-        const fresh = newMessages.filter((m: { id: string }) => !existingIds.has(m.id));
-        if (!fresh.length) return old;
+        const existing = (old.data ?? []) as { id: string }[];
+const existingIds = new Set(existing.map((m) => m.id));
+const fresh = newMessages.filter((m: { id: string }) => !existingIds.has(m.id));
         return { ...old, data: [...existing, ...fresh] };
       });
       qc.invalidateQueries({ queryKey: [KEY, "conversations"] });

@@ -11,7 +11,7 @@ async function resolveEmployeeId(userId: string, sessionEmployeeId?: string) {
   return emp?.id ?? null;
 }
 
-const HR_ONLY_TYPES = [ConversationType.DEPT_TO_DEPT, ConversationType.DEPT_TO_EMPLOYEE];
+const HR_ONLY_TYPES: Array<"DIRECT" | "EMPLOYEE_TO_DEPT" | "DEPT_TO_DEPT" | "DEPT_TO_EMPLOYEE"> = ["DEPT_TO_DEPT", "DEPT_TO_EMPLOYEE"]
 
 export async function GET(_request: NextRequest) {
   try {
