@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createLeaveSchema } from "@/lib/validations/leave";
 import { Role, LeaveStatus } from "@prisma/client";
+import { notifyLeaveSubmitted } from "@/lib/notifications";
 
 async function resolveEmployeeId(userId: string, sessionEmployeeId?: string): Promise<string | null> {
   if (sessionEmployeeId) return sessionEmployeeId;
@@ -100,6 +101,15 @@ export async function POST(request: NextRequest) {
         employee: { include: { user: { select: { name: true, email: true } } } },
       },
     });
+
+    // Notify HR/Admin about new leave request
+    const leaveTypePretty = parsed.data.leaveType.charAt(0) + parsed.data.leaveType.slice(1).toLowerCase();
+    await notifyLeaveSubmitted(
+      leave.employee.user.name,
+      leaveTypePretty,
+      leave.id,
+      session.user.id
+    ).catch(() => {}); // non-blocking
 
     return NextResponse.json({ data: leave }, { status: 201 });
   } catch (error) {

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { createEmployeeSchema } from "@/lib/validations/employee";
 import { Role, EmploymentStatus } from "@prisma/client";
+import { notifyNewEmployee } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   try {
@@ -109,6 +110,11 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Notify HR/Admin about new employee (non-blocking)
+    if (user.employee) {
+      notifyNewEmployee(name, position, session.user.id).catch(() => {});
+    }
 
     return NextResponse.json({ data: user }, { status: 201 });
   } catch (error) {

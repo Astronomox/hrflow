@@ -1,31 +1,30 @@
 "use client";
 
-import { Menu, Bell, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
+import { Menu, Sun, Moon } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { UserAvatar } from "@/components/shared/avatar";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ROLES } from "@/lib/constants";
 import { Role } from "@prisma/client";
-import { cn } from "@/lib/utils";
 
 const pageMeta: Record<string, { title: string; desc?: string }> = {
-  "/":             { title: "Dashboard",        desc: "Overview of your workspace" },
-  "/employees":    { title: "Employees",        desc: "Manage your team" },
-  "/departments":  { title: "Departments",      desc: "Organisational structure" },
-  "/attendance":   { title: "Attendance",       desc: "Track working hours" },
-  "/leave":        { title: "Leave Requests",   desc: "Your time off requests" },
-  "/leave/manage": { title: "Leave Management", desc: "Review and approve requests" },
-  "/messages":     { title: "Messages",         desc: "Internal communications" },
-  "/files":        { title: "Files",            desc: "Shared documents and uploads" },
-  "/profile":      { title: "My Profile",       desc: "View and update your details" },
+  "/":             { title: "Dashboard",        desc: "Overview of your workspace"       },
+  "/employees":    { title: "Employees",        desc: "Manage your team"                 },
+  "/departments":  { title: "Departments",      desc: "Organisational structure"         },
+  "/attendance":   { title: "Attendance",       desc: "Track working hours"              },
+  "/leave":        { title: "Leave Requests",   desc: "Your time off requests"           },
+  "/leave/manage": { title: "Leave Management", desc: "Review and approve requests"      },
+  "/messages":     { title: "Messages",         desc: "Internal communications"          },
+  "/files":        { title: "Files",            desc: "Shared documents and uploads"     },
+  "/profile":      { title: "My Profile",       desc: "View and update your details"     },
 };
 
 export function Topbar() {
@@ -45,7 +44,7 @@ export function Topbar() {
           onClick={toggleSidebar}
           className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
-          <Menu className="h-4.5 w-[18px] h-[18px]" />
+          <Menu className="h-[18px] w-[18px]" />
         </button>
         <div className="hidden sm:block">
           <h2 className="font-semibold text-sm leading-none">{meta.title}</h2>
@@ -62,9 +61,8 @@ export function Topbar() {
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </button>
 
-        <button className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors relative">
-          <Bell className="h-4 w-4" />
-        </button>
+        {/* Real notification bell */}
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

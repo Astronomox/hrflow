@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendMessageSchema } from "@/lib/validations/message";
+import { notifyNewMessage } from "@/lib/notifications";
 
 async function resolveEmployeeId(userId: string, sessionEmployeeId?: string) {
   if (sessionEmployeeId) return sessionEmployeeId;
@@ -18,7 +19,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const senderId = await resolveEmployeeId(session.user.id, session.user.employeeId);
     if (!senderId) return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
 
-    // Verify sender is a participant in this conversation
     const isParticipant = await prisma.conversationParticipant.findFirst({
       where: { conversationId: params.id, employeeId: senderId },
     });
@@ -39,6 +39,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
 
     await prisma.conversation.update({ where: { id: params.id }, data: { updatedAt: new Date() } });
+
+    // Notify other participants (non-blocking)
+    notifyNewMessage(params.id, session.user.name, senderId, parsed.data.content).catch(() => {});
 
     return NextResponse.json({ data: message }, { status: 201 });
   } catch (error) {

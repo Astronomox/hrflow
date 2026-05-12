@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { reviewLeaveSchema } from "@/lib/validations/leave";
 import { Role, LeaveStatus } from "@prisma/client";
+import { notifyLeaveReviewed } from "@/lib/notifications";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -17,10 +18,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const parsed = reviewLeaveSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 });
 
-    const leave = await prisma.leaveRequest.findUnique({ where: { id: params.id } });
+    const leave = await prisma.leaveRequest.findUnique({
+      where: { id: params.id },
+      include: { employee: { include: { user: { select: { id: true, name: true } } } } },
+    });
     if (!leave) return NextResponse.json({ error: "Leave request not found" }, { status: 404 });
 
-    // Only pending requests can be reviewed — prevents re-reviewing
     if (leave.status !== LeaveStatus.PENDING) {
       return NextResponse.json(
         { error: `This request is already ${leave.status.toLowerCase()}` },
@@ -40,6 +43,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         reviewer: { select: { name: true } },
       },
     });
+
+    // Notify the employee
+    const leaveTypePretty = leave.leaveType.charAt(0) + leave.leaveType.slice(1).toLowerCase();
+    await notifyLeaveReviewed(
+      leave.employee.user.id,
+      parsed.data.status as "APPROVED" | "REJECTED",
+      session.user.name,
+      leaveTypePretty
+    ).catch(() => {});
 
     return NextResponse.json({ data: updated });
   } catch (error) {
