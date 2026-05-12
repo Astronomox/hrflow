@@ -11,6 +11,9 @@ export function useFiles(scope: "mine" | "department" | "all" = "mine") {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    // Always refetch when tab is focused so uploads appear immediately
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 
@@ -26,7 +29,11 @@ export function useUploadFile() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Upload failed"); }
       return res.json();
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: [KEY] }); toast({ title: "File uploaded" }); },
+    onSuccess: () => {
+      // Invalidate all scopes so the file appears immediately regardless of tab
+      qc.invalidateQueries({ queryKey: [KEY] });
+      toast({ title: "File uploaded" });
+    },
     onError: (e: Error) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
   });
 }
