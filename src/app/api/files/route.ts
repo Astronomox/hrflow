@@ -31,14 +31,22 @@ export async function GET(request: NextRequest) {
       select: { departmentId: true },
     });
 
-    const where =
-      scope === "mine"
-        ? { uploaderId: employeeId, messageId: null }
-        : scope === "department"
-        ? { departmentId: employee?.departmentId ?? "__none__", messageId: null }
-        : scope === "all" && isHROrAdmin
-        ? { messageId: null }
-        : { uploaderId: employeeId, messageId: null };
+    let where: object;
+
+    if (scope === "mine") {
+      where = { uploaderId: employeeId, messageId: null };
+    } else if (scope === "department") {
+      // Department files = files explicitly tagged with a departmentId
+      where = {
+        departmentId: employee?.departmentId ?? "__none__",
+        messageId: null,
+      };
+    } else if (scope === "all" && isHROrAdmin) {
+      // All non-message files
+      where = { messageId: null };
+    } else {
+      where = { uploaderId: employeeId, messageId: null };
+    }
 
     const files = await prisma.file.findMany({
       where,
@@ -64,11 +72,11 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    // visibility: "private" | "department" | "all"
+    // "private" | "department" | "all"
     const visibility = (formData.get("visibility") as string) ?? "private";
 
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "File exceeds 10MB" }, { status: 400 });
+    if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "File exceeds 10MB limit" }, { status: 400 });
     if (!ALLOWED_FILE_TYPES.includes(file.type as typeof ALLOWED_FILE_TYPES[number])) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
@@ -81,12 +89,20 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    // Resolve departmentId based on visibility
+    // Determine departmentId based on visibility:
+    // "private" → null (only uploader sees it)
+    // "department" → uploader's departmentId (dept members see it)
+    // "all" → null BUT we mark it differently — use a special query in GET
     let departmentId: string | null = null;
     if (visibility === "department") {
-      const emp = await prisma.employee.findUnique({ where: { id: employeeId }, select: { departmentId: true } });
+      const emp = await prisma.employee.findUnique({
+        where: { id: employeeId },
+        select: { departmentId: true },
+      });
       departmentId = emp?.departmentId ?? null;
     }
+    // For "all" — departmentId stays null, uploaderId is set
+    // The "all" tab in GET returns messageId:null with no other filter for HR/Admin
 
     const record = await prisma.file.create({
       data: {
@@ -95,8 +111,7 @@ export async function POST(request: NextRequest) {
         size: file.size,
         mimeType: file.type,
         uploaderId: employeeId,
-        // For "all" visibility we store departmentId as null but messageId null too — shown in "all" tab
-        departmentId: visibility === "all" ? "public" : departmentId,
+        departmentId,
       },
       include: { uploader: { include: { user: { select: { name: true } } } } },
     });
