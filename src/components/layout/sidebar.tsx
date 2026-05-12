@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Users, Building2, Clock, CalendarOff,
+  ClipboardList, MessageSquare, FolderOpen, LogOut,
   Briefcase, UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
