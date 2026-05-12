@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { reviewLeaveSchema } from "@/lib/validations/leave";
-import { Role } from "@prisma/client";
+import { Role, LeaveStatus } from "@prisma/client";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -19,6 +19,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const leave = await prisma.leaveRequest.findUnique({ where: { id: params.id } });
     if (!leave) return NextResponse.json({ error: "Leave request not found" }, { status: 404 });
+
+    // Only pending requests can be reviewed — prevents re-reviewing
+    if (leave.status !== LeaveStatus.PENDING) {
+      return NextResponse.json(
+        { error: `This request is already ${leave.status.toLowerCase()}` },
+        { status: 409 }
+      );
+    }
 
     const updated = await prisma.leaveRequest.update({
       where: { id: params.id },

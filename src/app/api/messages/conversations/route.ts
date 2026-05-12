@@ -5,47 +5,21 @@ import { prisma } from "@/lib/prisma";
 import { createConversationSchema } from "@/lib/validations/message";
 import { ConversationType, Role } from "@prisma/client";
 
+async function resolveEmployeeId(userId: string, sessionEmployeeId?: string) {
+  if (sessionEmployeeId) return sessionEmployeeId;
+  const emp = await prisma.employee.findUnique({ where: { userId }, select: { id: true } });
+  return emp?.id ?? null;
+}
+
+const HR_ONLY_TYPES = [ConversationType.DEPT_TO_DEPT, ConversationType.DEPT_TO_EMPLOYEE];
+
 export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Admins/HR without employee profiles can still see conversations
-    // by their userId linked through employee
-    const employeeId = session.user.employeeId;
-
-    if (!employeeId) {
-      // Admin with no employee profile — find their employee record by userId
-      const employee = await prisma.employee.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true },
-      });
-
-      if (!employee) {
-        // Truly no employee profile — return empty, not 401
-        return NextResponse.json({ data: [] });
-      }
-
-      // Use discovered employeeId for the rest of the query
-      const conversations = await prisma.conversation.findMany({
-        where: { participants: { some: { employeeId: employee.id } } },
-        include: {
-          participants: {
-            include: {
-              employee: { include: { user: { select: { name: true, email: true } } } },
-              department: { select: { id: true, name: true } },
-            },
-          },
-          messages: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            include: { sender: { include: { user: { select: { name: true } } } } },
-          },
-        },
-        orderBy: { updatedAt: "desc" },
-      });
-      return NextResponse.json({ data: conversations });
-    }
+    const employeeId = await resolveEmployeeId(session.user.id, session.user.employeeId);
+    if (!employeeId) return NextResponse.json({ data: [] });
 
     const conversations = await prisma.conversation.findMany({
       where: { participants: { some: { employeeId } } },
@@ -77,29 +51,25 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Resolve employeeId — either from session or from DB lookup
-    let senderEmployeeId = session.user.employeeId;
-    if (!senderEmployeeId) {
-      const employee = await prisma.employee.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true },
-      });
-      if (!employee) {
-        return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
-      }
-      senderEmployeeId = employee.id;
-    }
+    const senderEmployeeId = await resolveEmployeeId(session.user.id, session.user.employeeId);
+    if (!senderEmployeeId) return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
 
     const body = await request.json();
     const parsed = createConversationSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
     const { type, recipientEmployeeId, recipientDepartmentId, initialMessage } = parsed.data;
+
+    // Enforce: only HR/Admin can initiate dept-scoped conversations
+    if (
+      HR_ONLY_TYPES.includes(type) &&
+      session.user.role !== Role.ADMIN &&
+      session.user.role !== Role.HR_MANAGER
+    ) {
+      return NextResponse.json({ error: "Only HR Managers and Admins can initiate department-scoped conversations" }, { status: 403 });
+    }
 
     // For DIRECT — reuse existing conversation
     if (type === ConversationType.DIRECT && recipientEmployeeId) {
@@ -117,10 +87,7 @@ export async function POST(request: NextRequest) {
         await prisma.message.create({
           data: { conversationId: existing.id, senderId: senderEmployeeId, content: initialMessage },
         });
-        await prisma.conversation.update({
-          where: { id: existing.id },
-          data: { updatedAt: new Date() },
-        });
+        await prisma.conversation.update({ where: { id: existing.id }, data: { updatedAt: new Date() } });
         return NextResponse.json({ data: existing }, { status: 200 });
       }
     }

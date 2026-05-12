@@ -26,6 +26,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ data: dept });
   } catch (error) {
     console.error("[DEPT_GET]", error);
+    const code = (error as { code?: string })?.code;
+    if (code === "P2002") return NextResponse.json({ error: "A record with this value already exists" }, { status: 409 });
+    if (code === "P2025") return NextResponse.json({ error: "Record not found" }, { status: 404 });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -58,6 +61,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ data: updated });
   } catch (error) {
     console.error("[DEPT_PATCH]", error);
+    const code = (error as { code?: string })?.code;
+    if (code === "P2002") return NextResponse.json({ error: "A record with this value already exists" }, { status: 409 });
+    if (code === "P2025") return NextResponse.json({ error: "Record not found" }, { status: 404 });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -75,6 +81,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ data: { message: "Department deleted" } });
   } catch (error) {
     console.error("[DEPT_DELETE]", error);
+    const code = (error as { code?: string })?.code;
+    if (code === "P2002") return NextResponse.json({ error: "A record with this value already exists" }, { status: 409 });
+    if (code === "P2025") return NextResponse.json({ error: "Record not found" }, { status: 404 });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

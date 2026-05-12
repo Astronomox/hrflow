@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("[EMPLOYEES_GET]", error);
+    const code = (error as { code?: string })?.code;
+    if (code === "P2002") return NextResponse.json({ error: "A record with this value already exists" }, { status: 409 });
+    if (code === "P2025") return NextResponse.json({ error: "Record not found" }, { status: 404 });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -110,6 +113,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: user }, { status: 201 });
   } catch (error) {
     console.error("[EMPLOYEES_POST]", error);
+    const code = (error as { code?: string })?.code;
+    if (code === "P2002") return NextResponse.json({ error: "A record with this value already exists" }, { status: 409 });
+    if (code === "P2025") return NextResponse.json({ error: "Record not found" }, { status: 404 });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
