@@ -6,38 +6,28 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Users, Building2, Clock, CalendarOff,
   ClipboardList, MessageSquare, FolderOpen, LogOut, ChevronLeft,
-  Briefcase,
+  Briefcase, UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Role } from "@prisma/client";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
 const navItems = [
-  { title: "Dashboard",        href: "/",             icon: LayoutDashboard, roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE] },
-  { title: "Employees",        href: "/employees",    icon: Users,           roles: [Role.ADMIN, Role.HR_MANAGER] },
-  { title: "Departments",      href: "/departments",  icon: Building2,       roles: [Role.ADMIN, Role.HR_MANAGER] },
-  { title: "Attendance",       href: "/attendance",   icon: Clock,           roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE] },
-  { title: "My Leave",         href: "/leave",        icon: CalendarOff,     roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE] },
-  { title: "Leave Management", href: "/leave/manage", icon: ClipboardList,   roles: [Role.ADMIN, Role.HR_MANAGER] },
-  { title: "Messages",         href: "/messages",     icon: MessageSquare,   roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE] },
-  { title: "Files",            href: "/files",        icon: FolderOpen,      roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE] },
+  { title: "Dashboard",        href: "/",             icon: LayoutDashboard, roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Overview"       },
+  { title: "Employees",        href: "/employees",    icon: Users,           roles: [Role.ADMIN, Role.HR_MANAGER],                section: "People"         },
+  { title: "Departments",      href: "/departments",  icon: Building2,       roles: [Role.ADMIN, Role.HR_MANAGER],                section: "People"         },
+  { title: "Attendance",       href: "/attendance",   icon: Clock,           roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Work"           },
+  { title: "My Leave",         href: "/leave",        icon: CalendarOff,     roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Work"           },
+  { title: "Leave Management", href: "/leave/manage", icon: ClipboardList,   roles: [Role.ADMIN, Role.HR_MANAGER],                section: "Work"           },
+  { title: "Messages",         href: "/messages",     icon: MessageSquare,   roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Communication"  },
+  { title: "Files",            href: "/files",        icon: FolderOpen,      roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Communication"  },
+  { title: "My Profile",       href: "/profile",      icon: UserCircle,      roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Account"        },
 ];
-
-const SECTION_LABELS: Record<string, string> = {
-  "/employees":    "People",
-  "/departments":  "People",
-  "/attendance":   "Work",
-  "/leave":        "Work",
-  "/leave/manage": "Work",
-  "/messages":     "Communication",
-  "/files":        "Communication",
-};
 
 export function Sidebar() {
   const pathname   = usePathname();
@@ -48,17 +38,14 @@ export function Sidebar() {
     user?.role ? item.roles.includes(user.role as Role) : false
   );
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
-
-  // Group items by section
   const sections: { label: string; items: typeof navItems }[] = [];
   let cur = "";
   for (const item of visible) {
-    const label = item.href === "/" ? "Overview" : (SECTION_LABELS[item.href] ?? "Other");
-    if (label !== cur) { sections.push({ label, items: [] }); cur = label; }
+    if (item.section !== cur) { sections.push({ label: item.section, items: [] }); cur = item.section; }
     sections[sections.length - 1].items.push(item);
   }
+
+  const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -66,10 +53,8 @@ export function Sidebar() {
         "sidebar-glass hidden md:flex flex-col fixed left-0 top-0 z-30 h-full transition-all duration-300 ease-in-out",
         sidebarOpen ? "w-[260px]" : "w-[68px]"
       )}>
-
-        {/* Logo */}
         <div className={cn(
-          "flex items-center h-16 px-3 border-b border-border shrink-0",
+          "flex items-center h-14 px-3 border-b border-border shrink-0",
           sidebarOpen ? "justify-between" : "justify-center"
         )}>
           {sidebarOpen ? (
@@ -97,24 +82,20 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Nav */}
         <ScrollArea className="flex-1 py-3">
           {!sidebarOpen ? (
-            /* Collapsed — icons only */
             <div className="space-y-0.5 px-2">
               {visible.map(item => {
-                const Icon   = item.icon;
+                const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
                   <Tooltip key={item.href}>
                     <TooltipTrigger asChild>
                       <Link href={item.href} className={cn(
                         "flex items-center justify-center h-9 w-9 mx-auto rounded-lg transition-all duration-150",
-                        active
-                          ? "bg-primary text-white shadow-sm shadow-primary/25"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        active ? "bg-primary text-white shadow-sm shadow-primary/25" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       )}>
-                        <Icon className="h-4.5 w-4.5 h-[18px] w-[18px]" />
+                        <Icon className="h-[18px] w-[18px]" />
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right" className="font-medium">{item.title}</TooltipContent>
@@ -123,23 +104,18 @@ export function Sidebar() {
               })}
             </div>
           ) : (
-            /* Expanded — grouped sections */
             <div className="space-y-4 px-3">
               {sections.map(({ label, items }) => (
                 <div key={label}>
-                  <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none">
-                    {label}
-                  </p>
+                  <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none">{label}</p>
                   <div className="space-y-0.5">
                     {items.map(item => {
-                      const Icon   = item.icon;
+                      const Icon = item.icon;
                       const active = isActive(item.href);
                       return (
                         <Link key={item.href} href={item.href} className={cn(
                           "flex items-center gap-3 h-9 px-2.5 rounded-lg text-sm font-medium transition-all duration-150 group",
-                          active
-                            ? "bg-primary text-white shadow-sm shadow-primary/20"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          active ? "bg-primary text-white shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         )}>
                           <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-150", !active && "group-hover:scale-110")} />
                           <span className="truncate">{item.title}</span>
@@ -154,7 +130,6 @@ export function Sidebar() {
           )}
         </ScrollArea>
 
-        {/* Footer */}
         <div className="p-2 border-t border-border">
           {sidebarOpen ? (
             <button
@@ -180,7 +155,6 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {/* Expand button when collapsed */}
       {!sidebarOpen && (
         <button
           onClick={toggleSidebar}

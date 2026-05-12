@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Save, Loader2, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Loader2, Save, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserAvatar } from "@/components/shared/avatar";
 import { Skeleton } from "@/components/shared/loading-skeleton";
 import { useDepartment, useUpdateDepartment } from "@/hooks/use-departments";
@@ -19,17 +19,17 @@ import { formatDate } from "@/lib/utils";
 
 export default function DepartmentDetailPage({ params }: { params: { id: string } }) {
   const { data, isLoading } = useDepartment(params.id);
-  const { data: empData } = useEmployees({ departmentId: params.id, pageSize: 100 });
+  const { data: empData } = useEmployees({ pageSize: 100 });
+  const { data: deptEmpData } = useEmployees({ departmentId: params.id, pageSize: 100 });
   const updateDept = useUpdateDepartment(params.id);
-  const { data: allEmpData } = useEmployees({ pageSize: 100 });
-  const allEmployees = allEmpData?.data ?? [];
+  const allEmployees = empData?.data ?? [];
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UpdateDepartmentInput>({
     resolver: zodResolver(updateDepartmentSchema),
     values: data?.data ? {
       name: data.data.name,
       description: data.data.description ?? "",
-      headId: data.data.headId ?? "",
+      headId: data.data.headId ?? undefined,
     } : undefined,
   });
 
@@ -37,18 +37,20 @@ export default function DepartmentDetailPage({ params }: { params: { id: string 
   const dept = data?.data;
   if (!dept) return <p className="text-muted-foreground">Department not found.</p>;
 
+  const currentHeadId = watch("headId");
+
   return (
-    <div>
+    <div className="animate-fade-up">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/departments"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
-        <h1 className="text-2xl font-bold flex-1">{dept.name}</h1>
+        <h1 className="text-xl font-bold flex-1">{dept.name}</h1>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <form onSubmit={handleSubmit((d) => updateDept.mutate(d))}>
-          <Card>
+          <Card className="border-border/60">
             <CardHeader><CardTitle className="text-base">Department Details</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -62,10 +64,13 @@ export default function DepartmentDetailPage({ params }: { params: { id: string 
               </div>
               <div className="space-y-2">
                 <Label>Department Head</Label>
-                <Select defaultValue={watch("headId") ?? ""} onValueChange={(v) => setValue("headId", v)}>
+                <Select
+                  value={currentHeadId ?? "none"}
+                  onValueChange={(v) => setValue("headId", v === "none" ? undefined : v)}
+                >
                   <SelectTrigger><SelectValue placeholder="Select head" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No head assigned</SelectItem>
+                    <SelectItem value="none">No head assigned</SelectItem>
                     {allEmployees.map((e: { id: string; user: { name: string } }) => (
                       <SelectItem key={e.id} value={e.id}>{e.user.name}</SelectItem>
                     ))}
@@ -73,28 +78,39 @@ export default function DepartmentDetailPage({ params }: { params: { id: string 
                 </Select>
               </div>
               <Button type="submit" disabled={updateDept.isPending}>
-                {updateDept.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : <><Save className="h-4 w-4 mr-2" />Save Changes</>}
+                {updateDept.isPending
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                  : <><Save className="h-4 w-4 mr-2" />Save Changes</>
+                }
               </Button>
             </CardContent>
           </Card>
         </form>
 
-        <Card>
+        <Card className="border-border/60">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" /> Employees ({dept._count?.employees ?? 0})
+              <Users className="h-4 w-4" />
+              Employees ({dept._count?.employees ?? 0})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {(empData?.data ?? []).length === 0 ? (
+            {(deptEmpData?.data ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">No employees in this department.</p>
             ) : (
               <div className="space-y-3">
-                {(empData?.data ?? []).map((e: { id: string; user: { name: string; email: string }; position: string; dateJoined: Date }) => (
+                {(deptEmpData?.data ?? []).map((e: {
+                  id: string;
+                  user: { name: string; email: string };
+                  position: string;
+                  dateJoined: Date;
+                }) => (
                   <div key={e.id} className="flex items-center gap-3">
                     <UserAvatar name={e.user.name} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <Link href={`/employees/${e.id}`} className="text-sm font-medium hover:underline truncate block">{e.user.name}</Link>
+                      <Link href={`/employees/${e.id}`} className="text-sm font-medium hover:underline truncate block">
+                        {e.user.name}
+                      </Link>
                       <p className="text-xs text-muted-foreground">{e.position}</p>
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0">{formatDate(e.dateJoined)}</span>

@@ -18,15 +18,15 @@ export function useUploadFile() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ file, departmentId }: { file: File; departmentId?: string }) => {
+    mutationFn: async ({ file, visibility = "private" }: { file: File; visibility?: string }) => {
       const form = new FormData();
       form.append("file", file);
-      if (departmentId) form.append("departmentId", departmentId);
+      form.append("visibility", visibility);
       const res = await fetch("/api/files", { method: "POST", body: form });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Upload failed"); }
       return res.json();
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: [KEY] }); toast({ title: "File uploaded successfully" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: [KEY] }); toast({ title: "File uploaded" }); },
     onError: (e: Error) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
   });
 }

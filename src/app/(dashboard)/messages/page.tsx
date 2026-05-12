@@ -19,19 +19,34 @@ import { useEmployees } from "@/hooks/use-employees";
 import { useDepartments } from "@/hooks/use-departments";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { createConversationSchema, type CreateConversationInput } from "@/lib/validations/message";
-import { CONVERSATION_TYPE_LABELS } from "@/lib/constants";
 import { ConversationType } from "@prisma/client";
 import { formatRelativeTime, truncate } from "@/lib/utils";
+
+// Role-based conversation types
+// Employees: Direct + Employee→Dept only
+// HR/Admin: all types
+const EMPLOYEE_TYPES = [
+  { value: ConversationType.DIRECT,           label: "Direct Message" },
+  { value: ConversationType.EMPLOYEE_TO_DEPT, label: "Message a Department" },
+];
+const ADMIN_TYPES = [
+  { value: ConversationType.DIRECT,             label: "Direct Message" },
+  { value: ConversationType.EMPLOYEE_TO_DEPT,   label: "Employee → Department" },
+  { value: ConversationType.DEPT_TO_DEPT,       label: "Department → Department" },
+  { value: ConversationType.DEPT_TO_EMPLOYEE,   label: "Department → Employee" },
+];
 
 export default function MessagesPage() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const { user } = useCurrentUser();
+  const { user, isAdminOrHR } = useCurrentUser();
   const { data, isLoading } = useConversations();
   const createConvo = useCreateConversation();
-  const { data: empData } = useEmployees({ pageSize: 100 });
+  const { data: empData } = useEmployees({ pageSize: 200 });
   const { data: deptData } = useDepartments();
   const conversations = data?.data ?? [];
+
+  const availableTypes = isAdminOrHR ? ADMIN_TYPES : EMPLOYEE_TYPES;
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } =
     useForm<CreateConversationInput>({
@@ -56,21 +71,20 @@ export default function MessagesPage() {
     participants: { employee?: { user: { name: string } } | null; department?: { name: string } | null }[];
   }) {
     const others = conv.participants.filter((p) => p.employee?.user.name !== user?.name);
-    const names = others
-      .map((p) => p.employee?.user.name ?? p.department?.name)
-      .filter(Boolean);
+    const names = others.map((p) => p.employee?.user.name ?? p.department?.name).filter(Boolean);
     return names.length > 0 ? names.join(", ") : "Conversation";
   }
 
+  // Filter out self from employee list
+  const otherEmployees = (empData?.data ?? []).filter(
+    (e: { id: string; user: { name: string } }) => e.user.name !== user?.name
+  );
+
   return (
-    <div>
+    <div className="animate-fade-up">
       <PageHeader
         title="Messages"
-        action={
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />New Message
-          </Button>
-        }
+        action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />New Message</Button>}
       />
 
       {isLoading ? (
@@ -82,12 +96,12 @@ export default function MessagesPage() {
       ) : conversations.length === 0 ? (
         <EmptyState
           icon={MessageSquare}
-          title="No conversations"
-          description="Start a new conversation with a colleague or department."
+          title="No conversations yet"
+          description="Start a conversation with a colleague or department."
           action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />New Message</Button>}
         />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-xl border border-border/60 overflow-hidden shadow-sm">
           {conversations.map((conv: {
             id: string; type: ConversationType; updatedAt: string;
             participants: { employee?: { user: { name: string } } | null; department?: { name: string } | null }[];
@@ -104,7 +118,7 @@ export default function MessagesPage() {
                 <UserAvatar name={name} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm truncate">{name}</span>
+                    <span className="font-semibold text-sm truncate">{name}</span>
                     <span className="text-xs text-muted-foreground shrink-0 ml-2">
                       {formatRelativeTime(conv.updatedAt)}
                     </span>
@@ -121,7 +135,7 @@ export default function MessagesPage() {
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>New Conversation</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -129,12 +143,17 @@ export default function MessagesPage() {
               <Label>Type</Label>
               <Select
                 defaultValue={ConversationType.DIRECT}
-                onValueChange={(v) => setValue("type", v as ConversationType)}
+                onValueChange={(v) => {
+                  setValue("type", v as ConversationType);
+                  // Clear recipient fields when type changes
+                  setValue("recipientEmployeeId", undefined);
+                  setValue("recipientDepartmentId", undefined);
+                }}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(CONVERSATION_TYPE_LABELS).map(([v, l]) => (
-                    <SelectItem key={v} value={v}>{l}</SelectItem>
+                  {availableTypes.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -144,9 +163,9 @@ export default function MessagesPage() {
               <div className="space-y-2">
                 <Label>Recipient</Label>
                 <Select onValueChange={(v) => setValue("recipientEmployeeId", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select a colleague" /></SelectTrigger>
                   <SelectContent>
-                    {(empData?.data ?? []).map((e: { id: string; user: { name: string } }) => (
+                    {otherEmployees.map((e: { id: string; user: { name: string } }) => (
                       <SelectItem key={e.id} value={e.id}>{e.user.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -158,7 +177,7 @@ export default function MessagesPage() {
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Select onValueChange={(v) => setValue("recipientDepartmentId", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger>
                   <SelectContent>
                     {(deptData?.data ?? []).map((d: { id: string; name: string }) => (
                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
@@ -177,10 +196,9 @@ export default function MessagesPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { setOpen(false); reset(); }}>Cancel</Button>
               <Button type="submit" disabled={createConvo.isPending}>
-                {createConvo.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Send
+                {createConvo.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Send
               </Button>
             </DialogFooter>
           </form>
