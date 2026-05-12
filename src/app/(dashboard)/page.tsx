@@ -76,7 +76,7 @@ export default function DashboardPage() {
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
           : STAT_CONFIG.map(cfg => (
-            <StatCard key={cfg.key} {...cfg} value={s?.[cfg.key] ?? 0} />
+            <StatCard key={cfg.key} label={cfg.label} icon={cfg.icon} cls={cfg.cls} iconCls={cfg.iconCls} valueCls={cfg.valueCls} sub={cfg.sub} value={s?.[cfg.key] ?? 0} />
           ))
         }
       </div>

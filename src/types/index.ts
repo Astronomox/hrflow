@@ -163,7 +163,7 @@ export interface CreateLeaveInput {
 }
 
 export interface ReviewLeaveInput {
-  status: LeaveStatus.APPROVED | LeaveStatus.REJECTED;
+  status: "APPROVED" | "REJECTED";
   reviewNote?: string;
 }
 
@@ -281,6 +281,7 @@ export interface EmployeeFilters {
   departmentId?: string;
   status?: EmploymentStatus;
   page?: number;
+  pageSize?: number;
 }
 
 export interface AttendanceFilters {

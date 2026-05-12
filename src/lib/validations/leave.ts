@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LeaveType, LeaveStatus } from "@prisma/client";
+import { LeaveType } from "@prisma/client";
 
 export const createLeaveSchema = z.object({
   leaveType: z.nativeEnum(LeaveType),
@@ -12,7 +12,7 @@ export const createLeaveSchema = z.object({
 });
 
 export const reviewLeaveSchema = z.object({
-  status: z.enum([LeaveStatus.APPROVED, LeaveStatus.REJECTED]),
+  status: z.enum(["APPROVED", "REJECTED"]),
   reviewNote: z.string().max(500).optional(),
 });
 

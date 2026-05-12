@@ -19,9 +19,9 @@ import { formatDate } from "@/lib/utils";
 
 export default function DepartmentDetailPage({ params }: { params: { id: string } }) {
   const { data, isLoading } = useDepartment(params.id);
-  const { data: empData } = useEmployees({ departmentId: params.id, pageSize: 100 } as never);
+  const { data: empData } = useEmployees({ departmentId: params.id, pageSize: 100 });
   const updateDept = useUpdateDepartment(params.id);
-  const { data: allEmpData } = useEmployees({ pageSize: 100 } as never);
+  const { data: allEmpData } = useEmployees({ pageSize: 100 });
   const allEmployees = allEmpData?.data ?? [];
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UpdateDepartmentInput>({

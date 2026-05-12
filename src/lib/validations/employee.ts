@@ -20,7 +20,7 @@ export const updateEmployeeSchema = z.object({
   phone: z.string().optional(),
   position: z.string().min(2).max(100).optional(),
   status: z.nativeEnum(EmploymentStatus).optional(),
-  departmentId: z.string().optional().nullable(),
+  departmentId: z.string().optional(),
   profileImage: z.string().url().optional().or(z.literal("")),
   role: z.nativeEnum(Role).optional(),
 });

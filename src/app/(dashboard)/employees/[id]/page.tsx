@@ -50,8 +50,8 @@ export default function EmployeeProfilePage({ params }: { params: { id: string }
             <UserAvatar name={employee.user.name} imageUrl={employee.profileImage} size="lg" className="h-20 w-20 text-2xl" />
             <h2 className="font-semibold mt-3">{employee.user.name}</h2>
             <p className="text-sm text-muted-foreground">{employee.position}</p>
-            <span className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${EMPLOYMENT_STATUS_COLORS[employee.status]}`}>
-              {EMPLOYMENT_STATUSES[employee.status]}
+            <span className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${EMPLOYMENT_STATUS_COLORS[employee.status as keyof typeof EMPLOYMENT_STATUS_COLORS]}`}>
+              {EMPLOYMENT_STATUSES[employee.status as keyof typeof EMPLOYMENT_STATUSES]}
             </span>
           </CardContent>
         </Card>
@@ -63,7 +63,7 @@ export default function EmployeeProfilePage({ params }: { params: { id: string }
               { icon: Mail, label: "Email", value: employee.user.email },
               { icon: Phone, label: "Phone", value: employee.phone ?? "Not provided" },
               { icon: Building2, label: "Department", value: employee.department?.name ?? "Unassigned" },
-              { icon: Briefcase, label: "Role", value: ROLES[employee.user.role] },
+              { icon: Briefcase, label: "Role", value: ROLES[employee.user.role as keyof typeof ROLES] },
               { icon: Calendar, label: "Date Joined", value: formatDate(employee.dateJoined) },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3">

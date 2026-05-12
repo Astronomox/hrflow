@@ -10,6 +10,7 @@ async function fetchEmployees(filters: EmployeeFilters = {}) {
   if (filters.departmentId) params.set("departmentId", filters.departmentId);
   if (filters.status) params.set("status", filters.status);
   if (filters.page) params.set("page", String(filters.page));
+  if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
   const res = await fetch(`/api/employees?${params}`);
   if (!res.ok) throw new Error("Failed to fetch employees");
   return res.json();

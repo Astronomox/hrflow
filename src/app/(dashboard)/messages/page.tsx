@@ -29,7 +29,7 @@ export default function MessagesPage() {
   const { user } = useCurrentUser();
   const { data, isLoading } = useConversations();
   const createConvo = useCreateConversation();
-  const { data: empData } = useEmployees({ pageSize: 100 } as never);
+  const { data: empData } = useEmployees({ pageSize: 100 });
   const { data: deptData } = useDepartments();
   const conversations = data?.data ?? [];
 

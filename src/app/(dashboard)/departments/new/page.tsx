@@ -17,7 +17,7 @@ import { createDepartmentSchema, type CreateDepartmentInput } from "@/lib/valida
 export default function NewDepartmentPage() {
   const router = useRouter();
   const createDept = useCreateDepartment();
-  const { data: empData } = useEmployees({ pageSize: 100 } as never);
+  const { data: empData } = useEmployees({ pageSize: 100 });
   const employees = empData?.data ?? [];
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateDepartmentInput>({
