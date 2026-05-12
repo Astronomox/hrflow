@@ -7,13 +7,16 @@ import { startOfDay } from "date-fns";
 export async function PATCH(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    let employeeId = session.user.employeeId;
+    if (!employeeId) {
+      const emp = await prisma.employee.findUnique({ where: { userId: session.user.id }, select: { id: true } });
+      employeeId = emp?.id;
     }
+    if (!employeeId) return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
 
-    const employeeId = session.user.employeeId;
     const today = startOfDay(new Date());
-
     const record = await prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
     });

@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { startOfDay } from "date-fns";
 import { Role } from "@prisma/client";
 
+async function resolveEmployeeId(userId: string, sessionEmployeeId?: string): Promise<string | null> {
+  if (sessionEmployeeId) return sessionEmployeeId;
+  const emp = await prisma.employee.findUnique({ where: { userId }, select: { id: true } });
+  return emp?.id ?? null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,18 +23,12 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") ?? "1");
     const pageSize = 20;
 
-    const isHROrAdmin =
-      session.user.role === Role.ADMIN ||
-      session.user.role === Role.HR_MANAGER;
+    const isHROrAdmin = session.user.role === Role.ADMIN || session.user.role === Role.HR_MANAGER;
 
-    // Employees can only view their own attendance
-    // HR/Admin can view any employee's attendance
-    const employeeId =
-      isHROrAdmin && requestedEmployeeId
-        ? requestedEmployeeId
-        : session.user.employeeId;
+    const myEmployeeId = await resolveEmployeeId(session.user.id, session.user.employeeId);
+    if (!myEmployeeId) return NextResponse.json({ data: [], total: 0, todayRecord: null });
 
-    if (!employeeId) return NextResponse.json({ data: [], total: 0, todayRecord: null });
+    const employeeId = isHROrAdmin && requestedEmployeeId ? requestedEmployeeId : myEmployeeId;
 
     const where = {
       employeeId,
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const today = startOfDay(new Date());
     const todayRecord = await prisma.attendance.findUnique({
-      where: { employeeId_date: { employeeId, date: today } },
+      where: { employeeId_date: { employeeId: myEmployeeId, date: today } },
     });
 
     return NextResponse.json({ data: records, total, todayRecord });
@@ -62,27 +62,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const employeeId = session.user.employeeId;
+    const employeeId = await resolveEmployeeId(session.user.id, session.user.employeeId);
+    if (!employeeId) return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
+
     const today = startOfDay(new Date());
 
     const existing = await prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
     });
-
-    if (existing) {
-      return NextResponse.json({ error: "Already clocked in today" }, { status: 409 });
-    }
+    if (existing) return NextResponse.json({ error: "Already clocked in today" }, { status: 409 });
 
     const record = await prisma.attendance.create({
-      data: {
-        employeeId,
-        clockIn: new Date(),
-        date: today,
-      },
+      data: { employeeId, clockIn: new Date(), date: today },
     });
 
     return NextResponse.json({ data: record }, { status: 201 });

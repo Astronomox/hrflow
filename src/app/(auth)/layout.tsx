@@ -9,7 +9,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel — branding only, no stats */}
+      {/* Left panel branding only, no stats */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/70 flex-col justify-between p-12">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-9 h-9 bg-white/20 rounded-xl">
@@ -23,7 +23,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           </h2>
           <p className="text-white/70 text-lg leading-relaxed">
             HR & Internal Communication Platform built for modern organisations.
-            Attendance, leave, messaging and files — all in one place.
+            Attendance, leave, messaging and files all in one place.
           </p>
         </div>
         <p className="text-white/40 text-sm">© 2026 HRFlow. All rights reserved.</p>

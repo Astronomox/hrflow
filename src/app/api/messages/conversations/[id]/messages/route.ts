@@ -7,7 +7,18 @@ import { sendMessageSchema } from "@/lib/validations/message";
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Resolve employeeId — works for both employees and admins who registered without going through HR
+    let senderId = session.user.employeeId;
+    if (!senderId) {
+      const emp = await prisma.employee.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true },
+      });
+      senderId = emp?.id;
+    }
+    if (!senderId) return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
 
     const body = await request.json();
     const parsed = sendMessageSchema.safeParse(body);
@@ -16,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const message = await prisma.message.create({
       data: {
         conversationId: params.id,
-        senderId: session.user.employeeId,
+        senderId,
         content: parsed.data.content,
       },
       include: {

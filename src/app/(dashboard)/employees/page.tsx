@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Search } from "lucide-react";
+import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -15,18 +17,28 @@ import { useDepartments } from "@/hooks/use-departments";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { EMPLOYMENT_STATUSES } from "@/lib/constants";
 import { EmploymentStatus } from "@prisma/client";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 
 export default function EmployeesPage() {
   const { isAdminOrHR } = useCurrentUser();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [departmentId, setDepartmentId] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [page, setPage] = useState(1);
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
 
-  const { data, isLoading } = useEmployees({ search, departmentId, status: status as EmploymentStatus, page });
+  // Debounce search — only fires API call 350ms after user stops typing
+  const handleSearchChange = useDebouncedCallback((value: string) => {
+    setDebouncedSearch(value);
+    setPage(1);
+  }, 350);
+
+  const { data, isLoading } = useEmployees({
+    search: debouncedSearch,
+    departmentId,
+    status: status as EmploymentStatus,
+    page,
+  });
   const { data: deptData } = useDepartments();
   const deactivate = useDeactivateEmployee();
 
@@ -35,7 +47,7 @@ export default function EmployeesPage() {
   const departments = deptData?.data ?? [];
 
   return (
-    <div>
+    <div className="animate-fade-up">
       <PageHeader
         title="Employees"
         description={`${data?.total ?? 0} total employees`}
@@ -43,7 +55,7 @@ export default function EmployeesPage() {
           isAdminOrHR && (
             <Button asChild>
               <Link href="/employees/new">
-                <Plus className="h-4 w-4 mr-2" /> Add Employee
+                <Plus className="h-4 w-4 mr-2" />Add Employee
               </Link>
             </Button>
           )
@@ -52,15 +64,21 @@ export default function EmployeesPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search by name, email, position..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            defaultValue={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              handleSearchChange(e.target.value);
+            }}
             className="pl-9"
           />
         </div>
-        <Select value={departmentId} onValueChange={(v) => { setDepartmentId(v === "all" ? "" : v); setPage(1); }}>
+        <Select
+          value={departmentId}
+          onValueChange={(v) => { setDepartmentId(v === "all" ? "" : v); setPage(1); }}
+        >
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="All departments" />
           </SelectTrigger>
@@ -71,7 +89,10 @@ export default function EmployeesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={(v) => { setStatus(v === "all" ? "" : v); setPage(1); }}>
+        <Select
+          value={status}
+          onValueChange={(v) => { setStatus(v === "all" ? "" : v); setPage(1); }}
+        >
           <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
@@ -90,8 +111,14 @@ export default function EmployeesPage() {
         <EmptyState
           icon={Users}
           title="No employees found"
-          description={search ? "Try a different search term." : "Get started by adding your first employee."}
-          action={isAdminOrHR ? <Button asChild><Link href="/employees/new"><Plus className="h-4 w-4 mr-2" />Add Employee</Link></Button> : undefined}
+          description={debouncedSearch ? "Try a different search term." : "Get started by adding your first employee."}
+          action={
+            isAdminOrHR ? (
+              <Button asChild>
+                <Link href="/employees/new"><Plus className="h-4 w-4 mr-2" />Add Employee</Link>
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <>

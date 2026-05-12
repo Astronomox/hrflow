@@ -7,7 +7,7 @@ import { Role } from "@prisma/client";
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: "/login",
@@ -28,23 +28,27 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase() },
           include: {
-            employee: {
-              select: { id: true },
-            },
+            employee: { select: { id: true } },
           },
         });
 
-        if (!user) {
-          throw new Error("No account found with this email");
-        }
+        if (!user) throw new Error("No account found with this email");
 
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password
-        );
+        const isPasswordValid = await compare(credentials.password, user.password);
+        if (!isPasswordValid) throw new Error("Incorrect password");
 
-        if (!isPasswordValid) {
-          throw new Error("Incorrect password");
+        // If user has no employee profile, create one automatically
+        let employeeId = user.employee?.id;
+        if (!employeeId) {
+          const employee = await prisma.employee.create({
+            data: {
+              userId: user.id,
+              position: "Employee",
+              dateJoined: new Date(),
+            },
+            select: { id: true },
+          });
+          employeeId = employee.id;
         }
 
         return {
@@ -52,7 +56,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          employeeId: user.employee?.id ?? undefined,
+          employeeId,
         };
       },
     }),
@@ -77,7 +81,6 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-// Extend next-auth types
 declare module "next-auth" {
   interface User {
     role: Role;

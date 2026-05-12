@@ -36,13 +36,26 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hash(password, 12);
 
+    // Create user AND employee profile together so session.user.employeeId is always set
     const user = await prisma.user.create({
       data: {
         name,
         email: email.toLowerCase(),
         password: hashedPassword,
+        employee: {
+          create: {
+            position: "Employee",
+            dateJoined: new Date(),
+          },
+        },
       },
-      select: { id: true, email: true, name: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        employee: { select: { id: true } },
+      },
     });
 
     return NextResponse.json({ data: user }, { status: 201 });

@@ -88,7 +88,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
-                Attendance — Last 7 Days
+                Attendance: Last 7 Days
               </CardTitle>
             </div>
           </CardHeader>
