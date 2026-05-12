@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Users, Building2, Clock, CalendarOff,
-  ClipboardList, MessageSquare, FolderOpen, LogOut, ChevronLeft,
   Briefcase, UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,14 +70,6 @@ export function Sidebar() {
             <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-xl shadow-sm shadow-primary/30">
               <Briefcase className="h-4 w-4 text-white" />
             </div>
-          )}
-          {sidebarOpen && (
-            <button
-              onClick={toggleSidebar}
-              className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
           )}
         </div>
 
@@ -154,15 +145,6 @@ export function Sidebar() {
           )}
         </div>
       </aside>
-
-      {!sidebarOpen && (
-        <button
-          onClick={toggleSidebar}
-          className="hidden md:flex fixed left-[68px] top-1/2 -translate-y-1/2 z-40 items-center justify-center w-5 h-10 bg-card border border-border rounded-r-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all shadow-sm"
-        >
-          <ChevronLeft className="h-3 w-3 rotate-180" />
-        </button>
-      )}
     </TooltipProvider>
   );
 }
