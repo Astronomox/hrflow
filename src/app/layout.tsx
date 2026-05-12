@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     template: "%s | HRFlow",
   },
   description: "HR & Internal Communication Management Platform",
+  icons: { icon: "/favicon.svg" },
 };
 
 export const viewport: Viewport = {

@@ -4,32 +4,34 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendMessageSchema } from "@/lib/validations/message";
 
+async function resolveEmployeeId(userId: string, sessionEmployeeId?: string) {
+  if (sessionEmployeeId) return sessionEmployeeId;
+  const emp = await prisma.employee.findUnique({ where: { userId }, select: { id: true } });
+  return emp?.id ?? null;
+}
+
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Resolve employeeId — works for both employees and admins who registered without going through HR
-    let senderId = session.user.employeeId;
-    if (!senderId) {
-      const emp = await prisma.employee.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true },
-      });
-      senderId = emp?.id;
-    }
+    const senderId = await resolveEmployeeId(session.user.id, session.user.employeeId);
     if (!senderId) return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
+
+    // Verify sender is a participant in this conversation
+    const isParticipant = await prisma.conversationParticipant.findFirst({
+      where: { conversationId: params.id, employeeId: senderId },
+    });
+    if (!isParticipant) {
+      return NextResponse.json({ error: "You are not a participant in this conversation" }, { status: 403 });
+    }
 
     const body = await request.json();
     const parsed = sendMessageSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 });
 
     const message = await prisma.message.create({
-      data: {
-        conversationId: params.id,
-        senderId,
-        content: parsed.data.content,
-      },
+      data: { conversationId: params.id, senderId, content: parsed.data.content },
       include: {
         sender: { include: { user: { select: { name: true } } } },
         files: true,

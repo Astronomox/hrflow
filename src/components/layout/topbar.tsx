@@ -25,6 +25,7 @@ const pageMeta: Record<string, { title: string; desc?: string }> = {
   "/leave/manage": { title: "Leave Management", desc: "Review and approve requests" },
   "/messages":     { title: "Messages",         desc: "Internal communications" },
   "/files":        { title: "Files",            desc: "Shared documents and uploads" },
+  "/profile":      { title: "My Profile",       desc: "View and update your details" },
 };
 
 export function Topbar() {

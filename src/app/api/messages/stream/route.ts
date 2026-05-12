@@ -18,6 +18,22 @@ export async function GET(request: NextRequest) {
     return new Response("conversationId required", { status: 400 });
   }
 
+  // Verify user is a participant
+  const employeeId = session.user.employeeId
+    ?? (await (async () => {
+        const emp = await prisma.employee.findUnique({ where: { userId: session.user.id }, select: { id: true } });
+        return emp?.id ?? null;
+      })());
+
+  if (employeeId) {
+    const isParticipant = await prisma.conversationParticipant.findFirst({
+      where: { conversationId, employeeId },
+    });
+    if (!isParticipant) {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
   let lastMessageId: string | null = null;
 
   // Get the latest message id to start from
