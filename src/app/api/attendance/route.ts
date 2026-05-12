@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay } from "date-fns";
+import { Role } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,13 +11,24 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const employeeId = searchParams.get("employeeId") ?? session.user.employeeId;
+    const requestedEmployeeId = searchParams.get("employeeId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const page = parseInt(searchParams.get("page") ?? "1");
     const pageSize = 20;
 
-    if (!employeeId) return NextResponse.json({ data: [], total: 0 });
+    const isHROrAdmin =
+      session.user.role === Role.ADMIN ||
+      session.user.role === Role.HR_MANAGER;
+
+    // Employees can only view their own attendance
+    // HR/Admin can view any employee's attendance
+    const employeeId =
+      isHROrAdmin && requestedEmployeeId
+        ? requestedEmployeeId
+        : session.user.employeeId;
+
+    if (!employeeId) return NextResponse.json({ data: [], total: 0, todayRecord: null });
 
     const where = {
       employeeId,
@@ -35,7 +47,6 @@ export async function GET(request: NextRequest) {
       prisma.attendance.count({ where }),
     ]);
 
-    // Today's record
     const today = startOfDay(new Date());
     const todayRecord = await prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId, date: today } },

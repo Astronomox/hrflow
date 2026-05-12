@@ -6,25 +6,45 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from "@/lib/constants";
+import { Role } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session || !session.user.employeeId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
-    const scope = searchParams.get("scope") ?? "mine"; // mine | department | all
+    const scope = searchParams.get("scope") ?? "mine";
+    const isHROrAdmin =
+      session.user.role === Role.ADMIN ||
+      session.user.role === Role.HR_MANAGER;
 
-    const where = scope === "mine"
-      ? { uploaderId: session.user.employeeId, messageId: null }
-      : scope === "department"
-      ? { departmentId: { not: null }, messageId: null }
-      : { messageId: null };
+    // Get current employee's department
+    const employee = await prisma.employee.findUnique({
+      where: { id: session.user.employeeId },
+      select: { departmentId: true },
+    });
+
+    const where =
+      scope === "mine"
+        ? { uploaderId: session.user.employeeId, messageId: null }
+        : scope === "department"
+        ? {
+            // Only show files from the user's own department
+            departmentId: employee?.departmentId ?? "__none__",
+            messageId: null,
+          }
+        : scope === "all" && isHROrAdmin
+        ? { messageId: null }
+        : { uploaderId: session.user.employeeId, messageId: null }; // fallback: own files
 
     const files = await prisma.file.findMany({
       where,
       include: { uploader: { include: { user: { select: { name: true } } } } },
       orderBy: { createdAt: "desc" },
+      take: 100, // pagination guard
     });
 
     return NextResponse.json({ data: files });
@@ -37,14 +57,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session || !session.user.employeeId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const departmentId = formData.get("departmentId") as string | null;
 
-    if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "File size exceeds 10MB limit" }, { status: 400 });
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File size exceeds 10MB limit" }, { status: 400 });
+    }
     if (!ALLOWED_FILE_TYPES.includes(file.type as typeof ALLOWED_FILE_TYPES[number])) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }

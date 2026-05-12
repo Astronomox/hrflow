@@ -2,7 +2,11 @@ import { withAuth, NextRequestWithAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 
-const ADMIN_ONLY_ROUTES = ["/employees/new", "/departments/new"];
+// Only pure admin actions — not "create employee" since HR can do that too
+const ADMIN_ONLY_ROUTES = [
+  "/departments/new",
+];
+
 const HR_AND_ADMIN_ROUTES = [
   "/employees",
   "/departments",
@@ -18,7 +22,6 @@ export default withAuth(
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Admin-only routes
     const isAdminOnly = ADMIN_ONLY_ROUTES.some((route) =>
       pathname.startsWith(route)
     );
@@ -26,7 +29,6 @@ export default withAuth(
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // HR and Admin routes
     const isHrAndAdmin = HR_AND_ADMIN_ROUTES.some((route) =>
       pathname.startsWith(route)
     );

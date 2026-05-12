@@ -3,19 +3,52 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createConversationSchema } from "@/lib/validations/message";
-import { ConversationType } from "@prisma/client";
+import { ConversationType, Role } from "@prisma/client";
 
 export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Admins/HR without employee profiles can still see conversations
+    // by their userId linked through employee
     const employeeId = session.user.employeeId;
 
+    if (!employeeId) {
+      // Admin with no employee profile — find their employee record by userId
+      const employee = await prisma.employee.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true },
+      });
+
+      if (!employee) {
+        // Truly no employee profile — return empty, not 401
+        return NextResponse.json({ data: [] });
+      }
+
+      // Use discovered employeeId for the rest of the query
+      const conversations = await prisma.conversation.findMany({
+        where: { participants: { some: { employeeId: employee.id } } },
+        include: {
+          participants: {
+            include: {
+              employee: { include: { user: { select: { name: true, email: true } } } },
+              department: { select: { id: true, name: true } },
+            },
+          },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: { sender: { include: { user: { select: { name: true } } } } },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+      return NextResponse.json({ data: conversations });
+    }
+
     const conversations = await prisma.conversation.findMany({
-      where: {
-        participants: { some: { employeeId } },
-      },
+      where: { participants: { some: { employeeId } } },
       include: {
         participants: {
           include: {
@@ -42,16 +75,33 @@ export async function GET(_request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user.employeeId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Resolve employeeId — either from session or from DB lookup
+    let senderEmployeeId = session.user.employeeId;
+    if (!senderEmployeeId) {
+      const employee = await prisma.employee.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true },
+      });
+      if (!employee) {
+        return NextResponse.json({ error: "No employee profile found" }, { status: 403 });
+      }
+      senderEmployeeId = employee.id;
+    }
 
     const body = await request.json();
     const parsed = createConversationSchema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
 
     const { type, recipientEmployeeId, recipientDepartmentId, initialMessage } = parsed.data;
-    const senderEmployeeId = session.user.employeeId;
 
-    // For DIRECT — check if conversation already exists
+    // For DIRECT — reuse existing conversation
     if (type === ConversationType.DIRECT && recipientEmployeeId) {
       const existing = await prisma.conversation.findFirst({
         where: {
@@ -67,13 +117,13 @@ export async function POST(request: NextRequest) {
         await prisma.message.create({
           data: { conversationId: existing.id, senderId: senderEmployeeId, content: initialMessage },
         });
-        await prisma.conversation.update({ where: { id: existing.id }, data: { updatedAt: new Date() } });
+        await prisma.conversation.update({
+          where: { id: existing.id },
+          data: { updatedAt: new Date() },
+        });
         return NextResponse.json({ data: existing }, { status: 200 });
       }
     }
-
-    const participants = [{ employeeId: senderEmployeeId }];
-    if (recipientEmployeeId) participants.push({ employeeId: recipientEmployeeId });
 
     const conversation = await prisma.conversation.create({
       data: {
@@ -96,7 +146,9 @@ export async function POST(request: NextRequest) {
             department: { select: { id: true, name: true } },
           },
         },
-        messages: { include: { sender: { include: { user: { select: { name: true } } } } } },
+        messages: {
+          include: { sender: { include: { user: { select: { name: true } } } } },
+        },
       },
     });
 
