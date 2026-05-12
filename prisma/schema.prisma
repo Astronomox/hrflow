@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  HR_MANAGER
+  EMPLOYEE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  PERSONAL
+  MATERNITY
+  PATERNITY
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ConversationType {
+  DIRECT
+  EMPLOYEE_TO_DEPT
+  DEPT_TO_DEPT
+  DEPT_TO_EMPLOYEE
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  role      Role     @default(EMPLOYEE)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee      Employee?
+  reviewedLeave LeaveRequest[] @relation("ReviewedLeave")
+
+  @@map("users")
+}
+
+model Employee {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String           @unique @db.ObjectId
+  phone        String?
+  position     String
+  status       EmploymentStatus @default(ACTIVE)
+  dateJoined   DateTime         @default(now())
+  profileImage String?
+  departmentId String?          @db.ObjectId
+
+  user         User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department?               @relation("DepartmentEmployees", fields: [departmentId], references: [id])
+  attendance   Attendance[]
+  leaveRequests LeaveRequest[]
+  sentMessages Message[]
+  participants ConversationParticipant[]
+  uploadedFiles File[]
+
+  @@map("employees")
+}
+
+model Department {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String  @unique
+  description String?
+  headId      String? @db.ObjectId
+
+  head      Employee?                 @relation("DepartmentHead", fields: [headId], references: [id])
+  employees Employee[]                @relation("DepartmentEmployees")
+  participants ConversationParticipant[]
+  files     File[]
+
+  @@map("departments")
+}
+
+model Attendance {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId String    @db.ObjectId
+  clockIn    DateTime
+  clockOut   DateTime?
+  date       DateTime
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@map("attendance")
+}
+
+model LeaveRequest {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId String      @db.ObjectId
+  leaveType  LeaveType
+  startDate  DateTime
+  endDate    DateTime
+  reason     String
+  status     LeaveStatus @default(PENDING)
+  reviewerId String?     @db.ObjectId
+  reviewNote String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewer User?     @relation("ReviewedLeave", fields: [reviewerId], references: [id])
+
+  @@map("leave_requests")
+}
+
+model Conversation {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  type         ConversationType
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String  @db.ObjectId
+  employeeId     String? @db.ObjectId
+  departmentId   String? @db.ObjectId
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  employee     Employee?    @relation(fields: [employeeId], references: [id])
+  department   Department?  @relation(fields: [departmentId], references: [id])
+
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String   @db.ObjectId
+  senderId       String   @db.ObjectId
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       Employee     @relation(fields: [senderId], references: [id])
+  files        File[]
+
+  @@map("messages")
+}
+
+model File {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  url          String
+  size         Int
+  mimeType     String
+  uploaderId   String   @db.ObjectId
+  messageId    String?  @db.ObjectId
+  departmentId String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+
+  uploader   Employee    @relation(fields: [uploaderId], references: [id])
+  message    Message?    @relation(fields: [messageId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  @@map("files")
+}
