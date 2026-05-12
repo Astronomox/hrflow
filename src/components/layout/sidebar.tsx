@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Users, Building2, Clock, CalendarOff,
   ClipboardList, MessageSquare, FolderOpen, LogOut,
-  Briefcase, UserCircle, X, Menu,
+  Briefcase, UserCircle, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
@@ -29,8 +29,9 @@ const navItems = [
   { title: "My Profile",       href: "/profile",      icon: UserCircle,      roles: [Role.ADMIN, Role.HR_MANAGER, Role.EMPLOYEE], section: "Account"       },
 ];
 
-function NavContent({ onNavClick }: { onNavClick?: () => void }) {
+export function Sidebar() {
   const pathname = usePathname();
+  const { sidebarOpen, toggleSidebar } = useUIStore();
   const { user } = useCurrentUser();
 
   const visible = navItems.filter(item =>
@@ -46,7 +47,7 @@ function NavContent({ onNavClick }: { onNavClick?: () => void }) {
 
   const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  return (
+  const navContent = (onNavClick?: () => void) => (
     <>
       <ScrollArea className="flex-1 py-3">
         <div className="space-y-4 px-3">
@@ -80,11 +81,10 @@ function NavContent({ onNavClick }: { onNavClick?: () => void }) {
           ))}
         </div>
       </ScrollArea>
-
       <div className="p-2 border-t border-border">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 w-full h-10 px-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group"
+          className="flex items-center gap-3 w-full h-10 px-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
         >
           <LogOut className="h-4 w-4 shrink-0" />
           <span>Sign out</span>
@@ -92,19 +92,15 @@ function NavContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
     </>
   );
-}
-
-export function Sidebar() {
-  const { sidebarOpen, toggleSidebar } = useUIStore();
 
   return (
     <TooltipProvider delayDuration={0}>
+
       {/* ── Desktop sidebar ─────────────────────────── */}
       <aside className={cn(
         "sidebar-glass hidden md:flex flex-col fixed left-0 top-0 z-30 h-full transition-all duration-300 ease-in-out",
         sidebarOpen ? "w-[260px]" : "w-[68px]"
       )}>
-        {/* Logo */}
         <div className={cn(
           "flex items-center h-14 px-3 border-b border-border shrink-0",
           sidebarOpen ? "justify-start gap-2.5" : "justify-center"
@@ -120,36 +116,32 @@ export function Sidebar() {
           )}
         </div>
 
-        {sidebarOpen ? (
-          <NavContent />
-        ) : (
-          /* Collapsed icons */
+        {sidebarOpen ? navContent() : (
           <ScrollArea className="flex-1 py-3">
-            {navItems
-              .filter(item => {
-                const { user } = useCurrentUser();
-                return user?.role ? item.roles.includes(user.role as Role) : false;
-              })
-              .map(item => {
+            <div className="space-y-0.5 px-2">
+              {visible.map(item => {
                 const Icon = item.icon;
+                const active = isActive(item.href);
                 return (
                   <Tooltip key={item.href}>
                     <TooltipTrigger asChild>
-                      <Link href={item.href} className="flex items-center justify-center h-9 w-9 mx-auto rounded-lg mb-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
+                      <Link href={item.href} className={cn(
+                        "flex items-center justify-center h-9 w-9 mx-auto rounded-lg transition-all",
+                        active ? "bg-primary text-white" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}>
                         <Icon className="h-[18px] w-[18px]" />
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right">{item.title}</TooltipContent>
                   </Tooltip>
                 );
-              })
-            }
+              })}
+            </div>
           </ScrollArea>
         )}
       </aside>
 
-      {/* ── Mobile drawer ────────────────────────────── */}
-      {/* Backdrop */}
+      {/* ── Mobile backdrop ──────────────────────────── */}
       {sidebarOpen && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
@@ -157,12 +149,11 @@ export function Sidebar() {
         />
       )}
 
-      {/* Drawer */}
+      {/* ── Mobile drawer ────────────────────────────── */}
       <aside className={cn(
         "md:hidden fixed left-0 top-0 z-50 h-full w-[280px] sidebar-glass flex flex-col transition-transform duration-300 ease-in-out",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       )}>
-        {/* Mobile header */}
         <div className="flex items-center justify-between h-14 px-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-xl shadow-sm">
@@ -180,9 +171,9 @@ export function Sidebar() {
             <X className="h-4 w-4" />
           </button>
         </div>
-
-        <NavContent onNavClick={toggleSidebar} />
+        {navContent(toggleSidebar)}
       </aside>
+
     </TooltipProvider>
   );
 }
