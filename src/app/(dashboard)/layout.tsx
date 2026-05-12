@@ -6,11 +6,15 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { useUIStore } from "@/stores/ui-store";
+import { useIdleTimeout } from "@/hooks/use-idle-timeout";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
   const { sidebarOpen } = useUIStore();
+
+  // Auto logout after 5 minutes of inactivity
+  useIdleTimeout();
 
   if (status === "unauthenticated") redirect("/login");
 
