@@ -7,7 +7,6 @@ import type { CreateConversationInput, SendMessageInput } from "@/lib/validation
 
 const KEY = "messages";
 
-// Conversations list — still polls at 8s (new convos appear)
 export function useConversations() {
   return useQuery({
     queryKey: [KEY, "conversations"],
@@ -20,11 +19,9 @@ export function useConversations() {
   });
 }
 
-// Messages in a conversation — uses SSE for real-time, falls back to React Query cache
 export function useMessages(conversationId: string) {
   const qc = useQueryClient();
 
-  // Initial fetch
   const query = useQuery({
     queryKey: [KEY, "messages", conversationId],
     queryFn: async () => {
@@ -33,19 +30,14 @@ export function useMessages(conversationId: string) {
       return res.json();
     },
     enabled: !!conversationId,
-    staleTime: Infinity, // SSE keeps it fresh — don't auto-refetch
+    staleTime: Infinity,
   });
 
-  // SSE listener
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!conversationId) return;
-
-    // Close any existing connection
-    if (esRef.current) {
-      esRef.current.close();
-    }
+    if (esRef.current) esRef.current.close();
 
     const es = new EventSource(`/api/messages/stream?conversationId=${conversationId}`);
     esRef.current = es;
@@ -53,8 +45,6 @@ export function useMessages(conversationId: string) {
     es.addEventListener("messages", (event) => {
       const newMessages = JSON.parse(event.data);
       if (!newMessages.length) return;
-
-      // Append new messages to the existing cache
       qc.setQueryData([KEY, "messages", conversationId], (old: { data: unknown[] } | undefined) => {
         if (!old) return old;
         const existing = old.data ?? [];
@@ -63,22 +53,16 @@ export function useMessages(conversationId: string) {
         if (!fresh.length) return old;
         return { ...old, data: [...existing, ...fresh] };
       });
-
-      // Also refresh conversation list so "last message" updates
       qc.invalidateQueries({ queryKey: [KEY, "conversations"] });
     });
 
     es.addEventListener("error", () => {
-      // SSE connection dropped — fall back to polling
       if (es.readyState === EventSource.CLOSED) {
         qc.invalidateQueries({ queryKey: [KEY, "messages", conversationId] });
       }
     });
 
-    return () => {
-      es.close();
-      esRef.current = null;
-    };
+    return () => { es.close(); esRef.current = null; };
   }, [conversationId, qc]);
 
   return query;
@@ -104,6 +88,8 @@ export function useCreateConversation() {
 
 export function useSendMessage(conversationId: string) {
   const qc = useQueryClient();
+  const { toast } = useToast();
+
   return useMutation({
     mutationFn: async (data: SendMessageInput) => {
       const res = await fetch(`/api/messages/conversations/${conversationId}/messages`, {
@@ -114,9 +100,46 @@ export function useSendMessage(conversationId: string) {
       if (!res.ok) throw new Error("Failed to send");
       return res.json();
     },
+
+    // Optimistic update — message appears instantly before server confirms
+    onMutate: async (data) => {
+      await qc.cancelQueries({ queryKey: [KEY, "messages", conversationId] });
+      const previous = qc.getQueryData([KEY, "messages", conversationId]);
+
+      qc.setQueryData([KEY, "messages", conversationId], (old: { data: unknown[] } | undefined) => {
+        if (!old) return old;
+        const optimistic = {
+          id: `optimistic-${Date.now()}`,
+          conversationId,
+          content: data.content,
+          createdAt: new Date().toISOString(),
+          sender: {
+            id: "optimistic",
+            user: { name: "You" },
+          },
+          files: [],
+          _optimistic: true,
+        };
+        return { ...old, data: [...(old.data ?? []), optimistic] };
+      });
+
+      return { previous };
+    },
+
+    // If server fails — roll back the optimistic message and show error
+    onError: (_err, _data, context) => {
+      if (context?.previous) {
+        qc.setQueryData([KEY, "messages", conversationId], context.previous);
+      }
+      toast({ title: "Message failed to send", description: "Please try again.", variant: "destructive" });
+    },
+
+    // On success — remove the optimistic message; SSE will push the real one
     onSuccess: () => {
-      // Invalidate to trigger a refetch — SSE will pick it up on the other end
-      qc.invalidateQueries({ queryKey: [KEY, "messages", conversationId] });
+      qc.setQueryData([KEY, "messages", conversationId], (old: { data: { id: string }[] } | undefined) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter((m) => !m.id.startsWith("optimistic-")) };
+      });
       qc.invalidateQueries({ queryKey: [KEY, "conversations"] });
     },
   });

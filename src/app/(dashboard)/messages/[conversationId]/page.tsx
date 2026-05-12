@@ -88,7 +88,8 @@ export default function ConversationPage({ params }: { params: { conversationId:
               id: string; content: string; createdAt: string;
               sender: { id: string; user: { name: string } };
             }, i: number) => {
-              const isOwn      = msg.sender.id === user?.employeeId;
+              const isOwn      = msg.sender.id === user?.employeeId || msg.id?.startsWith("optimistic-");
+              const isOptimistic = msg.id?.startsWith("optimistic-");
               const showName   = !isOwn && (i === 0 || messages[i - 1]?.sender.id !== msg.sender.id);
               const showAvatar = showName;
               const msgDate    = new Date(msg.createdAt).toDateString();

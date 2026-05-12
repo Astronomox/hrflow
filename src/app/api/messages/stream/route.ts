@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         } catch {
           // DB error — keep stream alive
         }
-      }, 800); // check every 800ms — much faster than 5s polling
+      }, 300); // check every 300ms — much faster than 5s polling
 
       // Clean up when client disconnects
       request.signal.addEventListener("abort", () => {
