@@ -69,7 +69,8 @@ model Employee {
   departmentId String?          @db.ObjectId
 
   user         User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department   Department?               @relation("DepartmentEmployees", fields: [departmentId], references: [id])
+  department   Department?               @relation("DepartmentEmployees", fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  headOf       Department[]              @relation("DepartmentHead")
   attendance   Attendance[]
   leaveRequests LeaveRequest[]
   sentMessages Message[]
@@ -85,7 +86,7 @@ model Department {
   description String?
   headId      String? @db.ObjectId
 
-  head      Employee?                 @relation("DepartmentHead", fields: [headId], references: [id])
+  head      Employee?                 @relation("DepartmentHead", fields: [headId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   employees Employee[]                @relation("DepartmentEmployees")
   participants ConversationParticipant[]
   files     File[]
