@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from "@/lib/constants";
 import { Role } from "@prisma/client";
@@ -36,13 +35,11 @@ export async function GET(request: NextRequest) {
     if (scope === "mine") {
       where = { uploaderId: employeeId, messageId: null };
     } else if (scope === "department") {
-      // Department files = files explicitly tagged with a departmentId
       where = {
         departmentId: employee?.departmentId ?? "__none__",
         messageId: null,
       };
     } else if (scope === "all" && isHROrAdmin) {
-      // All non-message files
       where = { messageId: null };
     } else {
       where = { uploaderId: employeeId, messageId: null };
@@ -75,7 +72,6 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    // "private" | "department" | "all"
     const visibility = (formData.get("visibility") as string) ?? "private";
 
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -84,18 +80,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const ext = path.extname(file.name);
-    const filename = `${randomUUID()}${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, filename), buffer);
+    // Upload to Vercel Blob instead of local filesystem
+    const ext = file.name.split(".").pop();
+    const filename = `${randomUUID()}.${ext}`;
+    const blob = await put(filename, file, { access: "public" });
 
-    // Determine departmentId based on visibility:
-    // "private" → null (only uploader sees it)
-    // "department" → uploader's departmentId (dept members see it)
-    // "all" → null BUT we mark it differently — use a special query in GET
     let departmentId: string | null = null;
     if (visibility === "department") {
       const emp = await prisma.employee.findUnique({
@@ -104,13 +93,11 @@ export async function POST(request: NextRequest) {
       });
       departmentId = emp?.departmentId ?? null;
     }
-    // For "all" — departmentId stays null, uploaderId is set
-    // The "all" tab in GET returns messageId:null with no other filter for HR/Admin
 
     const record = await prisma.file.create({
       data: {
         name: file.name,
-        url: `/uploads/${filename}`,
+        url: blob.url, // Vercel Blob public URL
         size: file.size,
         mimeType: file.type,
         uploaderId: employeeId,
