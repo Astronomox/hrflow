@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     } else {
       where = { uploaderId: employeeId, messageId: null };
     }
-
+    console.log("[FILES_GET] where clause:", JSON.stringify(where));
     const files = await prisma.file.findMany({
       where,
       include: { uploader: { include: { user: { select: { name: true } } } } },
