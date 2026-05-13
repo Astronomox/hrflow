@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const employeeId = await resolveEmployeeId(session.user.id, session.user.employeeId);
+    console.log("[FILES_GET] resolved employeeId:", employeeId, "session.user.id:", session.user.id, "session.user.employeeId:", session.user.employeeId);
     if (!employeeId) return NextResponse.json({ data: [] });
 
     const { searchParams } = new URL(request.url);
@@ -80,7 +81,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    // Upload to Vercel Blob instead of local filesystem
     const ext = file.name.split(".").pop();
     const filename = `${randomUUID()}.${ext}`;
     const blob = await put(filename, file, { access: "public" });
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const record = await prisma.file.create({
       data: {
         name: file.name,
-        url: blob.url, // Vercel Blob public URL
+        url: blob.url,
         size: file.size,
         mimeType: file.type,
         uploaderId: employeeId,
