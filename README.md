@@ -233,7 +233,7 @@ All endpoints require a valid session cookie (set by NextAuth on login).
 ## Assumptions
 
 1. One employee belongs to one department at a time (not multi-department)
-2. File uploads are stored locally in `/public/uploads/`. In production this should be S3 or Cloudinary
+2. File uploads are stored in Vercel Blob for production. In a self-hosted environment this would be S3 or Cloudinary
 3. Real-time messaging is implemented via polling (5s interval) — sufficient for an internal tool, with a clear upgrade path to WebSockets
 4. The `EMPLOYEE` role can view colleagues' profiles but cannot create or deactivate accounts
 5. Attendance is tracked per calendar day — one clock-in per employee per day, enforced at the database level via a unique compound index
@@ -245,7 +245,7 @@ All endpoints require a valid session cookie (set by NextAuth on login).
 | Decision | Tradeoff |
 |---|---|
 | Polling vs WebSockets | WebSockets need a persistent server (not compatible with serverless/Vercel). Polling at 5s is simple, works everywhere, and is acceptable for an internal HR tool |
-| Local file storage vs cloud | S3/Cloudinary is production-correct but adds env complexity and cost. Local storage works for assessment and demo purposes |
+| Vercel Blob vs S3/Cloudinary | Vercel Blob integrates natively with the deployment platform at zero config. S3 would be more portable but adds IAM setup and SDK complexity for no gain in this context |
 | MongoDB vs PostgreSQL | MongoDB's flexible schema suits HR data. Tradeoff: no native foreign key enforcement — referential integrity is handled at the Prisma/application layer |
 | JWT sessions vs database sessions | JWT is stateless and scales horizontally without a session store. Tradeoff: tokens can't be instantly revoked server-side (mitigated by the 5-minute idle timeout) |
 | shadcn/ui vs a full component library | shadcn gives unstyled accessible primitives we own and customise. A full library like MUI would be faster initially but harder to customise for a branded product |
