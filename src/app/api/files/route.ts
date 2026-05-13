@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     let where: object;
 
     if (scope === "mine") {
-      where = { uploaderId: employeeId, messageId: null };
+  where = { uploaderId: employeeId };
     } else if (scope === "department") {
       where = {
         departmentId: employee?.departmentId ?? "__none__",
