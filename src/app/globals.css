@@ -136,3 +136,27 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ── Enhanced stat card borders ────────────────── */
+.border-l-primary   { border-left-color: hsl(var(--primary)); }
+.border-l-emerald-500 { border-left-color: #10b981; }
+.border-l-amber-500   { border-left-color: #f59e0b; }
+.border-l-violet-500  { border-left-color: #8b5cf6; }
+
+/* ── Message row hover accent ──────────────────── */
+.message-row-active {
+  border-left: 2px solid hsl(var(--primary) / 0.4);
+  background: hsl(var(--primary) / 0.03);
+}
+
+/* ── Auth panel animate-in ─────────────────────── */
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0);      }
+}
+.animate-slide-right { animation: slide-right 0.35s ease both; }
+
+/* ── Input focus enhancement ───────────────────── */
+input:focus-visible, textarea:focus-visible {
+  border-color: hsl(var(--primary) / 0.5) !important;
+}

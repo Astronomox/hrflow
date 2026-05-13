@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,26 +36,42 @@ export default function LoginPage() {
 
   return (
     <div className="animate-fade-up">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Sign in to your HRFlow account</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary/70 mb-2">Welcome back</p>
+        <h1 className="text-[1.75rem] font-bold tracking-tight text-foreground leading-tight">
+          Sign in to HRFlow
+        </h1>
+        <p className="text-muted-foreground mt-1.5 text-sm">
+          Enter your credentials to access your workspace
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
-          <Input id="email" type="email" placeholder="you@company.com" autoComplete="email" {...register("email")} />
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            autoComplete="email"
+            className="h-11 bg-muted/40 border-border/60 focus:bg-background transition-colors"
+            {...register("email")}
+          />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          </div>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               autoComplete="current-password"
+              className="h-11 bg-muted/40 border-border/60 focus:bg-background transition-colors pr-10"
               {...register("password")}
             />
             <button
@@ -69,14 +85,36 @@ export default function LoginPage() {
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
 
-        <Button type="submit" className="w-full h-10 font-semibold shadow-sm shadow-primary/20" disabled={isSubmitting}>
-          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</> : "Sign in"}
+        <Button
+          type="submit"
+          className="w-full h-11 font-semibold shadow-md shadow-primary/20 gap-2 group"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <><Loader2 className="h-4 w-4 animate-spin" />Signing in...</>
+          ) : (
+            <>Sign in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></>
+          )}
         </Button>
       </form>
 
-      <p className="text-sm text-muted-foreground text-center mt-6">
-        Don&apos;t have an account?{" "}
-        <Link href="/register" className="text-primary font-semibold hover:underline">Register</Link>
+      {/* Divider */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border/60" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-background px-3 text-muted-foreground">New to HRFlow?</span>
+        </div>
+      </div>
+
+      <p className="text-sm text-muted-foreground text-center">
+        <Link
+          href="/register"
+          className="text-primary font-semibold hover:underline underline-offset-4"
+        >
+          Create an account
+        </Link>
       </p>
     </div>
   );

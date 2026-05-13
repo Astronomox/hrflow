@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, Clock, CalendarOff, Building2, MessageSquare, TrendingUp, ArrowUpRight } from "lucide-react";
+import { Users, Clock, CalendarOff, Building2, MessageSquare, TrendingUp, ArrowUpRight, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -16,10 +16,50 @@ import {
 const PIE_COLORS = ["#4f7dfc", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
 
 const STAT_CONFIG = [
-  { key: "totalEmployees",     label: "Total Employees",  icon: Users,       cls: "stat-blue",   iconCls: "text-primary",   valueCls: "text-primary",  sub: "Active headcount"   },
-  { key: "presentToday",       label: "Present Today",    icon: Clock,       cls: "stat-green",  iconCls: "text-green-600", valueCls: "text-green-600", sub: "Clocked in today"  },
-  { key: "pendingLeaveRequests",label: "Pending Leave",  icon: CalendarOff, cls: "stat-amber",  iconCls: "text-amber-600", valueCls: "text-amber-600", sub: "Awaiting review"   },
-  { key: "totalDepartments",   label: "Departments",      icon: Building2,   cls: "stat-violet", iconCls: "text-violet-600",valueCls: "text-violet-600",sub: "Active departments" },
+  {
+    key: "totalEmployees",
+    label: "Total Employees",
+    icon: Users,
+    borderColor: "border-l-primary",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    valueColor: "text-foreground",
+    sub: "Active headcount",
+    trend: "+2 this month",
+  },
+  {
+    key: "presentToday",
+    label: "Present Today",
+    icon: Clock,
+    borderColor: "border-l-emerald-500",
+    iconBg: "bg-emerald-50 dark:bg-emerald-950/40",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    valueColor: "text-emerald-700 dark:text-emerald-400",
+    sub: "Clocked in today",
+    trend: "Live",
+  },
+  {
+    key: "pendingLeaveRequests",
+    label: "Pending Leave",
+    icon: CalendarOff,
+    borderColor: "border-l-amber-500",
+    iconBg: "bg-amber-50 dark:bg-amber-950/40",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    valueColor: "text-amber-700 dark:text-amber-400",
+    sub: "Awaiting review",
+    trend: "Needs action",
+  },
+  {
+    key: "totalDepartments",
+    label: "Departments",
+    icon: Building2,
+    borderColor: "border-l-violet-500",
+    iconBg: "bg-violet-50 dark:bg-violet-950/40",
+    iconColor: "text-violet-600 dark:text-violet-400",
+    valueColor: "text-violet-700 dark:text-violet-400",
+    sub: "Active departments",
+    trend: "Stable",
+  },
 ] as const;
 
 function useDashboard() {
@@ -34,21 +74,30 @@ function useDashboard() {
   });
 }
 
-function StatCard({ label, value, icon: Icon, cls, iconCls, valueCls, sub, href }: {
+function StatCard({
+  label, value, icon: Icon, borderColor, iconBg, iconColor, valueColor, sub, trend,
+}: {
   label: string; value: number; icon: React.ElementType;
-  cls: string; iconCls: string; valueCls: string; sub: string; href?: string;
+  borderColor: string; iconBg: string; iconColor: string; valueColor: string;
+  sub: string; trend: string;
 }) {
   return (
-    <Card className={cn("border-0 shadow-sm overflow-hidden group cursor-default", cls)}>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-start justify-between mb-3">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg bg-background/70 backdrop-blur-sm", iconCls)}>
-            <Icon className="h-4 w-4" />
+    <Card className={cn(
+      "shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden",
+      borderColor
+    )}>
+      <CardContent className="pt-5 pb-4 px-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className={cn("flex items-center justify-center w-9 h-9 rounded-xl", iconBg)}>
+            <Icon className={cn("h-4.5 w-4.5", iconColor)} style={{ width: 18, height: 18 }} />
           </div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mt-1">
+            {trend}
+          </span>
         </div>
-        <p className={cn("text-3xl font-bold tracking-tight", valueCls)}>{value}</p>
-        <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+        <p className={cn("text-3xl font-bold tracking-tight mb-1", valueColor)}>{value}</p>
+        <p className="text-sm font-medium text-foreground/80">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
       </CardContent>
     </Card>
   );
@@ -71,12 +120,34 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 animate-fade-up">
+      {/* Greeting banner */}
+      <div className="flex items-center gap-3 pb-1">
+        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary/10">
+          <Activity className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-base font-bold text-foreground leading-none">Workspace Overview</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Live data · updates every 30s</p>
+        </div>
+      </div>
+
       {/* Stat Cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
           : STAT_CONFIG.map(cfg => (
-            <StatCard key={cfg.key} label={cfg.label} icon={cfg.icon} cls={cfg.cls} iconCls={cfg.iconCls} valueCls={cfg.valueCls} sub={cfg.sub} value={s?.[cfg.key] ?? 0} />
+            <StatCard
+              key={cfg.key}
+              label={cfg.label}
+              icon={cfg.icon}
+              borderColor={cfg.borderColor}
+              iconBg={cfg.iconBg}
+              iconColor={cfg.iconColor}
+              valueColor={cfg.valueColor}
+              sub={cfg.sub}
+              trend={cfg.trend}
+              value={s?.[cfg.key] ?? 0}
+            />
           ))
         }
       </div>
@@ -161,12 +232,16 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="px-5 pb-4 space-y-2">
             {[
-              { href: "/attendance", icon: Clock,       label: "Clock In / Out",  color: "text-green-600 bg-green-50 dark:bg-green-950/30"  },
-              { href: "/leave",      icon: CalendarOff, label: "Request Leave",   color: "text-amber-600 bg-amber-50 dark:bg-amber-950/30"  },
-              { href: "/messages",   icon: MessageSquare,label: "Send Message",   color: "text-primary   bg-primary/5"                      },
+              { href: "/attendance", icon: Clock,        label: "Clock In / Out",  color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30"  },
+              { href: "/leave",      icon: CalendarOff,  label: "Request Leave",   color: "text-amber-600 bg-amber-50 dark:bg-amber-950/30"        },
+              { href: "/messages",   icon: MessageSquare, label: "Send Message",   color: "text-primary bg-primary/5"                               },
               ...(isAdminOrHR ? [{ href: "/employees/new", icon: Users, label: "Add Employee", color: "text-violet-600 bg-violet-50 dark:bg-violet-950/30" }] : []),
             ].map(({ href, icon: Icon, label, color }) => (
-              <Link key={href} href={href} className="flex items-center gap-3 p-2.5 rounded-xl border border-border/60 hover:border-primary/30 hover:bg-primary/[.02] transition-all group">
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-3 p-2.5 rounded-xl border border-border/60 hover:border-primary/30 hover:bg-primary/[.02] transition-all group"
+              >
                 <div className={cn("flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold shrink-0", color)}>
                   <Icon className="h-3.5 w-3.5" />
                 </div>
