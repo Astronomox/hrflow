@@ -74,14 +74,6 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-4 p-3.5 bg-muted rounded-xl border border-border/60">
-        <p className="text-xs font-semibold text-muted-foreground mb-1.5">Demo credentials</p>
-        <div className="space-y-0.5 text-xs text-muted-foreground">
-          <p>Admin: <span className="font-mono text-foreground">admin@hrflow.com</span> / admin123</p>
-          <p>HR: <span className="font-mono text-foreground">hr@hrflow.com</span> / hr123</p>
-        </div>
-      </div>
-
       <p className="text-sm text-muted-foreground text-center mt-6">
         Don&apos;t have an account?{" "}
         <Link href="/register" className="text-primary font-semibold hover:underline">Register</Link>
