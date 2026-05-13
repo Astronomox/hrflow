@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { Briefcase, Users, Clock, Shield, Zap } from "lucide-react";
+import { Users, Clock, Shield, Zap } from "lucide-react";
 
 const features = [
   { icon: Users,  text: "Team & employee management"  },
@@ -21,7 +21,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         className="hidden lg:flex lg:w-[52%] relative overflow-hidden flex-col justify-between p-14"
         style={{ background: "linear-gradient(145deg, hsl(226 70% 48%) 0%, hsl(226 70% 38%) 40%, hsl(240 60% 28%) 100%)" }}
       >
-        {/* Geometric background accents */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-10"
             style={{ background: "radial-gradient(circle, white 0%, transparent 70%)" }} />
@@ -35,15 +34,11 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             </defs>
             <rect width="100%" height="100%" fill="url(#dots)" />
           </svg>
-          <div className="absolute top-0 right-0 w-px h-full opacity-10"
-            style={{ background: "linear-gradient(to bottom, transparent, white 30%, white 70%, transparent)" }} />
         </div>
 
         {/* Logo */}
         <div className="relative flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-white/15 rounded-2xl border border-white/20 backdrop-blur-sm shadow-lg">
-            <Briefcase className="h-5 w-5 text-white" />
-          </div>
+          <img src="/hrflow-mark.png" alt="HRFlow" style={{ width: 48, height: 48 }} />
           <div>
             <span className="font-bold text-xl text-white tracking-tight">HRFlow</span>
             <p className="text-[10px] text-white/50 leading-none mt-0.5 uppercase tracking-widest">Workspace</p>
@@ -90,10 +85,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           }}
         />
         <div className="w-full max-w-sm relative">
+          {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-10 justify-center">
-            <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-xl shadow-sm shadow-primary/30">
-              <Briefcase className="h-4 w-4 text-white" />
-            </div>
+            <img src="/hrflow-mark.png" alt="HRFlow" style={{ width: 40, height: 40 }} />
             <span className="font-bold text-lg tracking-tight">HRFlow</span>
           </div>
           {children}

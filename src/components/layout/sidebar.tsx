@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Users, Building2, Clock, CalendarOff,
   ClipboardList, MessageSquare, FolderOpen, LogOut,
-  Briefcase, UserCircle, X,
+  UserCircle, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
@@ -105,9 +105,7 @@ export function Sidebar() {
           "flex items-center h-14 px-3 border-b border-border shrink-0",
           sidebarOpen ? "justify-start gap-2.5" : "justify-center"
         )}>
-          <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-xl shadow-sm shadow-primary/30 shrink-0">
-            <Briefcase className="h-4 w-4 text-white" />
-          </div>
+          <img src="/hrflow-mark.png" alt="HRFlow" style={{ width: 32, height: 32 }} className="shrink-0" />
           {sidebarOpen && (
             <div>
               <span className="font-bold text-base tracking-tight">HRFlow</span>
@@ -156,9 +154,7 @@ export function Sidebar() {
       )}>
         <div className="flex items-center justify-between h-14 px-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-xl shadow-sm">
-              <Briefcase className="h-4 w-4 text-white" />
-            </div>
+            <img src="/hrflow-mark.png" alt="HRFlow" style={{ width: 32, height: 32 }} />
             <div>
               <span className="font-bold text-base">HRFlow</span>
               <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Workspace</p>
