@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const employeeId = await resolveEmployeeId(session.user.id, session.user.employeeId);
-    console.log("[FILES_GET] resolved employeeId:", employeeId, "session.user.id:", session.user.id, "session.user.employeeId:", session.user.employeeId);
     if (!employeeId) return NextResponse.json({ data: [] });
 
     const { searchParams } = new URL(request.url);
@@ -34,18 +33,17 @@ export async function GET(request: NextRequest) {
     let where: object;
 
     if (scope === "mine") {
-  where = { uploaderId: employeeId };
+      where = { uploaderId: employeeId };
     } else if (scope === "department") {
       where = {
         departmentId: employee?.departmentId ?? "__none__",
         messageId: null,
       };
     } else if (scope === "all" && isHROrAdmin) {
-      where = { messageId: null };
+      where = {};
     } else {
       where = { uploaderId: employeeId, messageId: null };
     }
-    console.log("[FILES_GET] where clause:", JSON.stringify(where));
     const files = await prisma.file.findMany({
       where,
       include: { uploader: { include: { user: { select: { name: true } } } } },
