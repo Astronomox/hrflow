@@ -18,10 +18,10 @@ A production-grade HR & Internal Communication Management Platform built as part
 | Next.js (App Router) | 14.2.29 | Unified server + client, file-based routing, API routes co-located with pages |
 | TypeScript (strict) | 5.x | End-to-end type safety. Zero `any` types in business logic |
 | Prisma ORM | 5.x | Type-safe database client with MongoDB adapter |
-| MongoDB Atlas | — | Flexible document model suits HR data with variable fields per employee |
+| MongoDB Atlas | - | Flexible document model suits HR data with variable fields per employee |
 | NextAuth.js | 4.x | Battle-tested JWT auth with credentials provider and RBAC callbacks |
-| TanStack Query | 5.x | Server state — caching, background refetch, optimistic updates |
-| Zustand | 5.x | Client state — sidebar open/closed, UI preferences. No Redux boilerplate |
+| TanStack Query | 5.x | Server state - caching, background refetch, optimistic updates |
+| Zustand | 5.x | Client state - sidebar open/closed, UI preferences. No Redux boilerplate |
 | Zod | 3.x | Shared validation schemas between client forms and server API routes |
 | Tailwind CSS + shadcn/ui | 3.x | Utility-first styling with accessible unstyled component primitives |
 | Recharts | 2.x | Composable chart library for dashboard analytics |
@@ -88,8 +88,8 @@ pnpm start      # production server
 ```
 src/
   app/
-    (auth)/           # Login and register pages — redirects if already authenticated
-    (dashboard)/      # All protected pages — auth-guarded via middleware + layout
+    (auth)/           # Login and register pages - redirects if already authenticated
+    (dashboard)/      # All protected pages - auth-guarded via middleware + layout
       page.tsx        # Dashboard home
       employees/      # Employee CRUD
       departments/    # Department management
@@ -97,13 +97,13 @@ src/
       leave/          # Leave requests + management queue
       messages/       # Conversation list + chat view
       files/          # File upload and browser
-    api/              # API route handlers — one file per resource
+    api/              # API route handlers - one file per resource
   components/
     ui/               # shadcn/ui primitives (button, input, dialog, etc.)
     shared/           # Reusable app components (EmptyState, PageHeader, Avatar, etc.)
     layout/           # Sidebar, Topbar, MobileNav
     employees/        # Domain-specific components (EmployeeTable, EmployeeForm)
-  hooks/              # TanStack Query hooks — one file per domain
+  hooks/              # TanStack Query hooks - one file per domain
   lib/
     auth.ts           # NextAuth config
     prisma.ts         # Prisma singleton client
@@ -113,7 +113,7 @@ src/
   stores/             # Zustand stores (ui-store: sidebar state, theme)
   types/              # Central TypeScript interfaces and API response types
   providers/          # React context wrappers (QueryProvider, SessionProvider, ThemeProvider)
-  middleware.ts       # Edge middleware — JWT validation + role-based route protection
+  middleware.ts       # Edge middleware - JWT validation + role-based route protection
 ```
 
 ### Why App Router (not Pages Router)?
@@ -220,9 +220,9 @@ All endpoints require a valid session cookie (set by NextAuth on login).
 
 - Passwords hashed with bcrypt (12 rounds)
 - JWT sessions signed with `NEXTAUTH_SECRET`
-- Route protection at middleware level (edge runtime) — not just client-side
-- Role checks on every mutating API endpoint — middleware alone is not enough
-- Employees can only read their own attendance records — HR/Admin can read any
+- Route protection at middleware level (edge runtime) - not just client-side
+- Role checks on every mutating API endpoint - middleware alone is not enough
+- Employees can only read their own attendance records - HR/Admin can read any
 - File `scope=department` returns only the user's own department's files
 - `NEXTAUTH_URL` enforced to prevent open redirect attacks
 - `.env` excluded from git via `.gitignore`
@@ -234,9 +234,9 @@ All endpoints require a valid session cookie (set by NextAuth on login).
 
 1. One employee belongs to one department at a time (not multi-department)
 2. File uploads are stored in Vercel Blob for production. In a self-hosted environment this would be S3 or Cloudinary
-3. Real-time messaging is implemented via polling (5s interval) — sufficient for an internal tool, with a clear upgrade path to WebSockets
+3. Real-time messaging is implemented via polling (5s interval) - sufficient for an internal tool, with a clear upgrade path to WebSockets
 4. The `EMPLOYEE` role can view colleagues' profiles but cannot create or deactivate accounts
-5. Attendance is tracked per calendar day — one clock-in per employee per day, enforced at the database level via a unique compound index
+5. Attendance is tracked per calendar day - one clock-in per employee per day, enforced at the database level via a unique compound index
 
 ---
 
@@ -246,7 +246,7 @@ All endpoints require a valid session cookie (set by NextAuth on login).
 |---|---|
 | Polling vs WebSockets | WebSockets need a persistent server (not compatible with serverless/Vercel). Polling at 5s is simple, works everywhere, and is acceptable for an internal HR tool |
 | Vercel Blob vs S3/Cloudinary | Vercel Blob integrates natively with the deployment platform at zero config. S3 would be more portable but adds IAM setup and SDK complexity for no gain in this context |
-| MongoDB vs PostgreSQL | MongoDB's flexible schema suits HR data. Tradeoff: no native foreign key enforcement — referential integrity is handled at the Prisma/application layer |
+| MongoDB vs PostgreSQL | MongoDB's flexible schema suits HR data. Tradeoff: no native foreign key enforcement - referential integrity is handled at the Prisma/application layer |
 | JWT sessions vs database sessions | JWT is stateless and scales horizontally without a session store. Tradeoff: tokens can't be instantly revoked server-side (mitigated by the 5-minute idle timeout) |
 | shadcn/ui vs a full component library | shadcn gives unstyled accessible primitives we own and customise. A full library like MUI would be faster initially but harder to customise for a branded product |
 
@@ -254,16 +254,16 @@ All endpoints require a valid session cookie (set by NextAuth on login).
 
 ## What I Would Improve With More Time
 
-1. **WebSocket messaging** — replace polling with Socket.io for true real-time
-2. **Email notifications** — SendGrid integration for leave approval/rejection emails
-3. **Audit log** — every create/update/delete tracked with actor, timestamp, diff
-4. **Advanced RBAC** — department-scoped HR permissions (HR Manager can only manage their own department)
-5. **File previews** — in-browser PDF viewer and image lightbox
-6. **Test coverage** — Vitest unit tests for Zod schemas and API route handlers
-7. **Docker** — `docker-compose.yml` with MongoDB container for one-command local setup
-8. **PWA** — service worker for offline attendance history viewing
-9. **Pagination on messages** — cursor-based pagination for large conversation histories
-10. **Profile image upload** — direct image upload to replace the URL input field
+1. **WebSocket messaging** - replace polling with Socket.io for true real-time
+2. **Email notifications** - SendGrid integration for leave approval/rejection emails
+3. **Audit log** - every create/update/delete tracked with actor, timestamp, diff
+4. **Advanced RBAC** - department-scoped HR permissions (HR Manager can only manage their own department)
+5. **File previews** - in-browser PDF viewer and image lightbox
+6. **Test coverage** - Vitest unit tests for Zod schemas and API route handlers
+7. **Docker** - `docker-compose.yml` with MongoDB container for one-command local setup
+8. **PWA** - service worker for offline attendance history viewing
+9. **Pagination on messages** - cursor-based pagination for large conversation histories
+10. **Profile image upload** - direct image upload to replace the URL input field
 
 ---
 
